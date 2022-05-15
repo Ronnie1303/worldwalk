@@ -1,4 +1,5 @@
 import numpy as np
+import itertools
 
 
 def distance_mahalanobis(posA, posB):
@@ -23,10 +24,16 @@ class World:
     MOVE_DOWN   = 3
     ACTIONS     = [MOVE_LEFT, MOVE_UP, MOVE_RIGHT, MOVE_DOWN]
 
-    def __init__(self, seed=0, distanceMetric=distance_mahalanobis):
-        # Hardcoded dims
-        self.height = 10
-        self.width  = 20
+    def __init__(self, seed=0, height=10, width=20, distanceMetric=distance_mahalanobis):
+        if height < 5 or width < 5:
+            raise Exception('Width and height of world map must be at least 5!')
+
+        if seed == 0:
+            self.height = 10
+            self.width  = 20
+        else:
+            self.height = height
+            self.width  = width
 
         # Set distance metric
         self.distanceMetric = distanceMetric
@@ -70,7 +77,59 @@ class World:
             self.worldMap[-4:-2, 17:]   = World.PENALTY
             self.worldMap[-2:, -1]      = World.PENALTY
         else:
-            raise Exception('Generating world with nonzero seeds not implemented yet!')
+            # Cellular automaton
+            # 1. Initialize world according to seed
+            pattern         = [int(x) for x in str(seed)]
+            numElements     = self.worldMap.size
+            #flatWorld       = np.tile(pattern, int(np.ceil(numElements / len(pattern))))
+            #flatWorld       = flatWorld[:numElements]
+
+            rng                         = np.random.default_rng(seed)
+            flatWorld                   = rng.integers(low=0, high=10, size=numElements)
+            flatWorld[flatWorld < 5]    = 0
+            flatWorld[flatWorld >= 5]   = World.PENALTY
+            self.worldMap               = np.reshape(flatWorld, (self.height, self.width))
+
+            # 2. Iterate map
+            for k in range(5):
+                worldCopy = self.worldMap.copy()
+                for pos in itertools.product(range(self.height), range(self.width)):
+                    wallCount = 0
+
+                    for i in range(-1,2):
+                        for j in range(-1, 2):
+                            if not 0 <= pos[0] + i < self.height or not 0 <= pos[1] + j < self.width:
+                                wallCount += 1
+                            elif self.worldMap[pos[0] + i, pos[1] + j] == World.PENALTY:
+                                wallCount += 1
+
+                    if wallCount < 4:
+                        worldCopy[pos[0], pos[1]] = 0
+                    elif wallCount > 4:
+                        worldCopy[pos[0], pos[1]] = World.PENALTY
+                    else:
+                        pass
+
+                self.worldMap = worldCopy.copy()
+
+            # 2.5 Invert map
+            self.worldMap[worldCopy == 0]               = World.PENALTY
+            self.worldMap[worldCopy == World.PENALTY]   = 0
+
+            # 3. Generate target location
+            sel = pattern[0]
+            countedValidTiles = 0
+            for i in range(self.height - 1, -1, -1):
+                for j in range(self.width - 1, -1, -1):
+                    if self.worldMap[i,j] == 0:
+                        countedValidTiles += 1
+
+                    if countedValidTiles == sel:
+                        self.worldMap[i, j] = World.REWARD
+                        self.targetLoc[:]   = [i ,j]
+                        break
+                if self.worldMap[i, j] == World.REWARD:
+                    break
 
 
     def apply_action(self, action: int, state: np.ndarray) -> 'tuple':

@@ -27,7 +27,7 @@ class AgentWithPolicy(Agent):
 class AgentWithNeuralNet(Agent):
     def __init__(self, neuralNetwork):
         super().__init__()
-        self.neuralNet = neuralNetwork
+        self.neuralNet = neuralNetworki
 
 
     def action(self, worldState):
