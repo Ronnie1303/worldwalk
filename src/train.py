@@ -3,7 +3,7 @@ import itertools
 import src.world as wrld
 
 
-def train_agent_with_value_iteration(agent, world, epochs=400, epsilon=1e-4):
+def train_agent_with_value_iteration(agent, world, epochs=400, epsilon=1e-4, discount=0.9):
     values = np.zeros((world.height, world.width), np.float32)
 
     for i in range(epochs):
@@ -13,7 +13,7 @@ def train_agent_with_value_iteration(agent, world, epochs=400, epsilon=1e-4):
             qVals           = np.zeros((4,), np.float32)
             for a in wrld.World.ACTIONS:
                 newState, qVals[a]  = world.apply_action(a, np.array(state))
-                qVals[a]            += values[newState[0], newState[1]]
+                qVals[a]            += discount * values[newState[0], newState[1]]
             values[state[0], state[1]]          = np.max(qVals)
             agent.policy[state[0], state[1]]    = np.argmax(qVals)
 
@@ -23,5 +23,6 @@ def train_agent_with_value_iteration(agent, world, epochs=400, epsilon=1e-4):
         if (i + 1) % 50 == 0 or i == 0:
             print('[{}/{}] Max value change: {}'.format(i+1, epochs, maxValChange))
         if maxValChange < epsilon:
+            print('[{}/{}] Max value change: {}'.format(i + 1, epochs, maxValChange))
             break
 

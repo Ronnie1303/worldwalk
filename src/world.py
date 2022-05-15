@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def distance_mahalanobis(posA, posB):
     return np.abs(posA[0] - posB[0]) + np.abs(posA[1] - posB[1])
 
