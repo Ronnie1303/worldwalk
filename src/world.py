@@ -11,7 +11,7 @@ def distance_euclid(posA, posB):
 class World:
     # Coeffs
     REWARD          = 100
-    PENALTY         = -100
+    PENALTY         = -1000
     WALL_PENALTY    = -5
     WALK_PENALTY    = -1
 
@@ -20,6 +20,7 @@ class World:
     MOVE_UP     = 1
     MOVE_RIGHT  = 2
     MOVE_DOWN   = 3
+    ACTIONS     = [MOVE_LEFT, MOVE_UP, MOVE_RIGHT, MOVE_DOWN]
 
     def __init__(self, seed=0, distanceMetric=distance_mahalanobis):
         # Hardcoded dims
@@ -33,9 +34,6 @@ class World:
         self.worldMap   = np.zeros((self.height, self.width), dtype=int)
         self.targetLoc  = np.zeros((2,), dtype=int)
 
-        # State is triplet [x, y, status]; x and y indicate position; status indicates if agent alive ([1,-1])
-        self.state = np.array([0, 0, 1], dtype=int)
-
         self.generate_world(seed)
 
 
@@ -44,9 +42,7 @@ class World:
         for i in range(self.height - 1, -1, -1):
             worldRepresentation += '|'
             for j in range(self.width):
-                if self.state[0] == i and self.state[1] == j:
-                    worldRepresentation += 'O|'
-                elif self.worldMap[i,j] == 0:
+                if self.worldMap[i,j] == 0:
                     worldRepresentation += ' |'
                 elif self.worldMap[i, j] == World.REWARD:
                     worldRepresentation += '*|'
@@ -59,7 +55,7 @@ class World:
     def generate_world(self, seed: int):
         if seed == 0:
             self.worldMap[9, 17]        = World.REWARD
-            self.worldMap[2:5, 1] = World.PENALTY
+            self.worldMap[2:5, 1]       = World.PENALTY
             self.worldMap[1:5, 2:4]     = World.PENALTY
             self.worldMap[2:6, 3:7]     = World.PENALTY
             self.worldMap[2:6, 9:14]    = World.PENALTY
@@ -76,33 +72,24 @@ class World:
             raise Exception('Generating world with nonzero seeds not implemented yet!')
 
 
-    def apply_action(self, action: int) -> int:
-        # Check if agent dead
-        if self.state[2] == -1:
-            return World.PENALTY
-
-        if not 0 < action < 3:
+    def apply_action(self, action: int, state: np.ndarray) -> 'tuple':
+        if not 0 <= action <= 3:
             raise Exception('[ERROR] Action ID ({}) not in valid range! [0,3]'.format(action))
 
         stateUpdates    = [[0, -1], [1, 0], [0, 1], [-1, 0]]
-        newState        = self.state[:2] + stateUpdates[action]
+        newState        = state + stateUpdates[action]
 
         if not 0 <= newState[0] < self.height or not 0 <= newState[1] < self.width:
             # Implicates attempt to go out of bounds
-            return World.WALL_PENALTY
+            return state, World.WALL_PENALTY
         else:
-            self.state[:2] = newState
+            distanceDelta   = self.distanceMetric(state, self.targetLoc) - self.distanceMetric(newState, self.targetLoc)
+            state           = newState
 
-        if self.worldMap[newState] == World.PENALTY:
-            self.state[2]   = -1
-            reward          = World.PENALTY
+        if self.worldMap[newState[0], newState[1]] == World.PENALTY:
+            reward = World.PENALTY
         else:
-            distanceDelta   = self.distanceMetric(self.state[:2], self.targetLoc) - \
-                              self.distanceMetric(newState, self.targetLoc)
-            reward          = World.WALK_PENALTY + distanceDelta + self.worldMap[self.state[:2]]
+            reward = World.WALK_PENALTY + distanceDelta + self.worldMap[state[0], state[1]]
 
-        return reward
+        return state, reward
 
-
-    def reset_state(self):
-        self.state = np.array([0, 0, 1], dtype=int)
