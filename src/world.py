@@ -117,8 +117,8 @@ class World:
             self.worldMap[worldCopy == World.PENALTY]   = 0
 
             # 3. Generate target location
-            sel = pattern[0]
-            countedValidTiles = 0
+            sel                 = pattern[0]
+            countedValidTiles   = 0
             for i in range(self.height - 1, -1, -1):
                 for j in range(self.width - 1, -1, -1):
                     if self.worldMap[i,j] == 0:

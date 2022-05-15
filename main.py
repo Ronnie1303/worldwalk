@@ -5,10 +5,11 @@ import src.plottingTools as plttools
 
 
 if __name__ == '__main__':
-    w = world.World(width=43, height=30, seed=24122021)
+    w = world.World(width=43, height=30, seed=0)
     a = agent.AgentWithPolicy(w.height, w.width)
 
-    training.train_agent_with_value_iteration(a, w)
+    #training.train_agent_with_value_iteration(a, w)
+    training.train_agent_with_policy_iteration(a, w)
     plttools.plot(w, a)
 
 
